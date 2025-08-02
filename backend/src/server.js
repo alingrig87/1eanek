@@ -1,11 +1,27 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Conectare MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Definire model User
+const userSchema = new mongoose.Schema({
+  username: String,
+  password: String,
+});
+const User = mongoose.model('User', userSchema);
 
 app.get('/', (_req, res) => {
   res.send('Hello from backend API!');
@@ -14,6 +30,37 @@ app.get('/', (_req, res) => {
 app.get('/admin', (_req, res) => {
   res.send('Admin endpoint');
 });
+
+app.post('/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    console.log(`Login attempt: ${username} ${password}`);
+
+    const user = await User.findOne({ username });
+    if (!user) return res.status(401).json({ message: 'User not found' });
+
+    // Hash parola introdusa pentru debug
+    const hashFromInput = await bcrypt.hash(password, 10);
+    console.log('Hashed input password:', hashFromInput);
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', isMatch);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid password' });
+
+    const token = jwt.sign(
+      { id: user._id, username: user.username },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);

@@ -12,9 +12,15 @@ app.use(cors());
 app.use(express.json());
 
 // Conectare MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+require('dotenv').config();
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.error('❌ MongoDB connection error:', err.message));
+
 
 // Definire model User
 const userSchema = new mongoose.Schema({
@@ -22,6 +28,9 @@ const userSchema = new mongoose.Schema({
   password: String,
 });
 const User = mongoose.model('User', userSchema);
+
+const tournamentRoutes = require('./routes/tournaments');
+
 
 app.get('/', (_req, res) => {
   res.send('Hello from backend API!');
@@ -31,7 +40,7 @@ app.get('/admin', (_req, res) => {
   res.send('Admin endpoint');
 });
 
-
+app.use('/tournaments', tournamentRoutes);
 
 app.post('/admin/login', async (req, res) => {
   try {

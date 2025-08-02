@@ -31,33 +31,24 @@ app.get('/admin', (_req, res) => {
   res.send('Admin endpoint');
 });
 
+
+
 app.post('/admin/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    
-    console.log(`Login attempt: ${username} ${password}`);
-
     const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ message: 'User not found' });
-
-    // Hash parola introdusa pentru debug
-    const hashFromInput = await bcrypt.hash(password, 10);
-    console.log('Hashed input password:', hashFromInput);
-
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match:', isMatch);
     if (!isMatch) return res.status(401).json({ message: 'Invalid password' });
-
     const token = jwt.sign(
       { id: user._id, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-
     res.json({ token });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
